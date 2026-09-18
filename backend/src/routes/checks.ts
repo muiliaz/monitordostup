@@ -41,7 +41,9 @@ export async function checkRoutes(app: FastifyInstance, opts: { scheduler: Sched
   app.put('/api/checks/:id', async (req) => {
     const { id } = idParam.parse(req.params);
     const data = checkInput.parse(req.body);
-    const check = await prisma.check.update({ where: { id }, data, include: withGroup });
+    // Run with the new config right away: otherwise shortening the interval
+    // (e.g. 1 h -> 30 s) would only take effect after the old next_run_at.
+    const check = await prisma.check.update({ where: { id }, data: { ...data, nextRunAt: new Date() }, include: withGroup });
     publishCheck(check);
     return check;
   });
