@@ -1,0 +1,10 @@
+{
+  "name": "target-emulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Zero-dependency HTTP server emulating monitored sites (ok/slow/error/timeout/flaky).",
+  "scripts": {
+    "start": "node src/index.ts"
+  }
+}
