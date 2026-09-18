@@ -35,7 +35,10 @@ function AdminShell({ username }: { username: string }) {
   return (
     <>
       <header className="topbar">
-        <strong>Монитор доступности</strong>
+        <div className="brand">
+          <strong>Монитор доступности</strong>
+          <div className="muted small">Отслеживайте статус ваших сайтов и сервисов в реальном времени</div>
+        </div>
         <nav>
           <NavLink to="/" end>
             Проверки
