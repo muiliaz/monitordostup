@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ApiError } from '../api/client';
 import { useCheckAction, useChecks, useGroups } from '../api/hooks';
 import type { Check } from '../api/types';
 import { CheckForm } from '../components/CheckForm';
@@ -78,6 +79,7 @@ function CheckRow({ check: c, now, onEdit }: { check: Check; now: number; onEdit
     <tr>
       <td>
         <StatusBadge status={c.currentStatus} paused={c.isPaused} />
+        {c.isRunning && <div className="muted small">идёт проверка…</div>}
       </td>
       <td>
         <div className="check-name">
@@ -90,6 +92,9 @@ function CheckRow({ check: c, now, onEdit }: { check: Check; now: number; onEdit
       <td className={downFor !== null ? 'down-text' : ''}>{downFor !== null ? formatDuration(downFor) : '—'}</td>
       <td>{formatInterval(c.intervalSec)}</td>
       <td className="row-actions">
+        <button disabled={c.isRunning} onClick={() => action.mutate({ id: c.id, action: 'run' })} title="Запустить проверку сейчас">
+          Запустить
+        </button>
         {c.isPaused ? (
           <button onClick={() => action.mutate({ id: c.id, action: 'resume' })}>Возобновить</button>
         ) : (
@@ -104,6 +109,11 @@ function CheckRow({ check: c, now, onEdit }: { check: Check; now: number; onEdit
         >
           Удалить
         </button>
+        {action.error && (
+          <div className="error small">
+            {action.error instanceof ApiError && action.error.status === 409 ? 'Проверка уже выполняется' : String(action.error)}
+          </div>
+        )}
       </td>
     </tr>
   );

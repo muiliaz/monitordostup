@@ -17,5 +17,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY package.json ./
-# Apply migrations on every start, then run the server.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+# Apply migrations on every start, then run the server. `exec` makes node PID 1,
+# otherwise SIGTERM from `docker compose stop/restart` hits sh and never reaches
+# node, and the graceful shutdown (releasing check locks) is skipped.
+CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/index.js"]

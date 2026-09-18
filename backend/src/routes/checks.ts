@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { prisma } from '../db.js';
+import { HttpError } from '../errors.js';
+import type { Scheduler } from '../scheduler/scheduler.js';
 import { checkInput, idParam } from '../validation.js';
 
-export async function checkRoutes(app: FastifyInstance) {
+export async function checkRoutes(app: FastifyInstance, opts: { scheduler: Scheduler }) {
   app.get('/api/checks', async () => {
     return prisma.check.findMany({
       orderBy: [{ groupId: 'asc' }, { name: 'asc' }],
@@ -41,6 +43,17 @@ export async function checkRoutes(app: FastifyInstance) {
     // Run right away instead of waiting for the stale next_run_at.
     return prisma.check.update({ where: { id }, data: { isPaused: false, nextRunAt: new Date() } });
   });
+
+  // Runs in the background; the result shows up on the dashboard.
+  app.post('/api/checks/:id/run', async (req, reply) => {
+    const { id } = idParam.parse(req.params);
+    const outcome = await opts.scheduler.runNow(id);
+    if (outcome === 'not_found') throw new HttpError(404, 'not_found');
+    if (outcome === 'already_running') throw new HttpError(409, 'already_running');
+    return reply.status(202).send({ started: true });
+  });
+
+  app.get('/api/scheduler/stats', async () => opts.scheduler.stats());
 
   app.delete('/api/checks/:id', async (req, reply) => {
     const { id } = idParam.parse(req.params);

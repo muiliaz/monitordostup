@@ -13,7 +13,8 @@ export function useMe() {
 }
 
 export function useChecks() {
-  return useQuery({ queryKey: keys.checks, queryFn: () => api<Check[]>('/checks') });
+  // TEMPORARY until SSE (stage 6): poll so scheduler results show up.
+  return useQuery({ queryKey: keys.checks, queryFn: () => api<Check[]>('/checks'), refetchInterval: 5000 });
 }
 
 export function useGroups() {
@@ -42,7 +43,7 @@ export function useSaveCheck() {
 export function useCheckAction() {
   const invalidate = useInvalidateAll();
   return useMutation({
-    mutationFn: ({ id, action }: { id: number; action: 'pause' | 'resume' | 'delete' }) =>
+    mutationFn: ({ id, action }: { id: number; action: 'pause' | 'resume' | 'run' | 'delete' }) =>
       action === 'delete'
         ? api<Check | void>(`/checks/${id}`, { method: 'DELETE' })
         : api<Check>(`/checks/${id}/${action}`, { method: 'POST' }),
