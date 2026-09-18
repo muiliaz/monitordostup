@@ -7,6 +7,7 @@ import { authRoutes, requireAdmin } from './auth.js';
 import { checkRoutes } from './routes/checks.js';
 import { groupRoutes } from './routes/groups.js';
 import { historyRoutes } from './routes/history.js';
+import { closeAllStreams, streamRoutes } from './live/stream.js';
 import { Scheduler } from './scheduler/scheduler.js';
 
 const app = Fastify({ logger: true });
@@ -27,11 +28,13 @@ await app.register(async (admin) => {
   await admin.register(checkRoutes, { scheduler });
   await admin.register(groupRoutes);
   await admin.register(historyRoutes);
+  await admin.register(streamRoutes);
 });
 
 async function shutdown(signal: string) {
   app.log.info({ signal }, 'shutting down');
   await scheduler.stop();
+  closeAllStreams();
   await app.close();
   await prisma.$disconnect();
   process.exit(0);

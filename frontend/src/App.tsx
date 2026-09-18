@@ -2,6 +2,8 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from './api/client';
 import { keys, useMe } from './api/hooks';
+import { useLiveStream } from './api/useLiveStream';
+import { LiveIndicator } from './components/LiveIndicator';
 import { CheckDetailsPage } from './pages/CheckDetailsPage';
 import { ChecksPage } from './pages/ChecksPage';
 import { IncidentsPage } from './pages/IncidentsPage';
@@ -10,10 +12,16 @@ import { LoginPage } from './pages/LoginPage';
 
 function AdminLayout() {
   const me = useMe();
-  const qc = useQueryClient();
 
   if (me.error) return <LoginPage />;
   if (me.isPending) return <p className="container">Загрузка…</p>;
+  return <AdminShell username={me.data.username} />;
+}
+
+// Rendered only when logged in, so the SSE stream is opened with a valid session.
+function AdminShell({ username }: { username: string }) {
+  const qc = useQueryClient();
+  const live = useLiveStream('/api/stream');
 
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' });
@@ -35,7 +43,8 @@ function AdminLayout() {
           <NavLink to="/groups">Группы</NavLink>
         </nav>
         <span className="spacer" />
-        <span className="muted small">{me.data?.username}</span>
+        <LiveIndicator state={live} />
+        <span className="muted small">{username}</span>
         <button onClick={logout}>Выйти</button>
       </header>
       <main className="container">

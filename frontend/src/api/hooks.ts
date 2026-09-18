@@ -11,28 +11,26 @@ export const keys = {
   incidents: (checkId?: number) => ['incidents', checkId ?? 'all'] as const,
 };
 
-// TEMPORARY until SSE (stage 6): polling interval for live-ish data.
-const POLL_MS = 5000;
 
 export function useMe() {
   return useQuery({ queryKey: keys.me, queryFn: () => api<{ username: string }>('/auth/me'), retry: false });
 }
 
 export function useChecks() {
-  return useQuery({ queryKey: keys.checks, queryFn: () => api<Check[]>('/checks'), refetchInterval: POLL_MS });
+  return useQuery({ queryKey: keys.checks, queryFn: () => api<Check[]>('/checks') });
 }
 
 export function useCheck(id: number) {
-  return useQuery({ queryKey: keys.check(id), queryFn: () => api<Check>(`/checks/${id}`), refetchInterval: POLL_MS });
+  return useQuery({ queryKey: keys.check(id), queryFn: () => api<Check>(`/checks/${id}`) });
 }
 
 export function useResults(id: number, limit = 50) {
-  return useQuery({ queryKey: keys.results(id), queryFn: () => api<CheckResult[]>(`/checks/${id}/results?limit=${limit}`), refetchInterval: POLL_MS });
+  return useQuery({ queryKey: keys.results(id), queryFn: () => api<CheckResult[]>(`/checks/${id}/results?limit=${limit}`) });
 }
 
 export function useIncidents(checkId?: number) {
   const qs = checkId ? `?checkId=${checkId}` : '';
-  return useQuery({ queryKey: keys.incidents(checkId), queryFn: () => api<Incident[]>(`/incidents${qs}`), refetchInterval: POLL_MS });
+  return useQuery({ queryKey: keys.incidents(checkId), queryFn: () => api<Incident[]>(`/incidents${qs}`) });
 }
 
 export function useGroups() {

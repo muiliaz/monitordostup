@@ -1,5 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { prisma } from '../db.js';
+import { bus } from '../live/bus.js';
+import { publishApplied } from '../live/publish.js';
 import { applyResult } from '../monitor/applyResult.js';
 import { httpProbe } from './httpProbe.js';
 import { computeNextRunAt } from './nextRun.js';
@@ -67,6 +69,7 @@ export class Scheduler {
     for (const controller of this.inFlight.values()) controller.abort();
     if (ids.length > 0) {
       await prisma.check.updateMany({ where: { id: { in: ids } }, data: { isRunning: false, lockedAt: null } });
+      for (const id of ids) bus.publish({ type: 'check.upsert', data: { id, isRunning: false, lockedAt: null } });
     }
     this.log.info({ aborted: ids.length }, 'scheduler stopped');
   }
@@ -137,6 +140,7 @@ export class Scheduler {
     const controller = new AbortController();
     this.inFlight.set(check.id, controller);
     const startedAt = new Date();
+    bus.publish({ type: 'check.upsert', data: { id: check.id, isRunning: true } });
     const lagMs = manual ? 0 : startedAt.getTime() - check.scheduledAt.getTime();
 
     try {
@@ -155,6 +159,8 @@ export class Scheduler {
         { checkId: check.id, manual, lagMs, durationMs: result.responseTimeMs, ok: result.isSuccess, httpCode: result.httpCode, error: result.errorMessage ?? undefined },
         'check finished',
       );
+      // The result is already committed; a failed publish only costs live freshness.
+      if (applied) await publishApplied(applied).catch((err) => this.log.error({ err, checkId: check.id }, 'live publish failed'));
       if (applied?.transition) {
         this.log.info({ checkId: check.id, transition: applied.transition.kind, incidentId: applied.incident?.id }, 'status changed');
       }

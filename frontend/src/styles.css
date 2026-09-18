@@ -93,3 +93,9 @@ a:hover { text-decoration: underline; }
 .facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 12px 0 0; }
 .facts dt { color: var(--muted); }
 .facts dd { margin: 0; word-break: break-all; }
+
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.live-open .dot { background: var(--up); box-shadow: 0 0 0 3px var(--up-bg); }
+.live-reconnecting { color: var(--down); }
+.live-reconnecting .dot { background: var(--down); }
