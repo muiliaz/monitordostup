@@ -44,6 +44,36 @@ docker compose up --build
 - MailDev: http://localhost:1080
 - Backend healthcheck: http://localhost:3000/api/health
 
+## target-emulator: эндпоинты
+
+Заглушка «проверяемых сайтов». Из контейнеров доступна как
+`http://target-emulator:4000/...`: этот адрес указывается в проверках. С хоста —
+`http://localhost:4000/...`.
+
+| Эндпоинт | Поведение |
+|---|---|
+| `GET /ok` | `200`, тело содержит `status: ok` (для проверки подстроки) |
+| `GET /slow?ms=3000` | `200` после задержки (до 10 мин) |
+| `GET /error?code=500` | отвечает указанным кодом |
+| `GET /timeout` | никогда не отвечает |
+| `GET /flaky?rate=0.5` | `500` с вероятностью `rate`, иначе `200` |
+| `GET /switch/<name>` | ведёт себя по текущему режиму цели `<name>` (по умолчанию `ok`) |
+| `PUT /control/switch/<name>` | сменить режим: `{"mode":"ok"\|"error"\|"slow"\|"timeout","code":503,"ms":5000}` |
+| `GET /control/switch`, `DELETE /control/switch` | текущие режимы / сбросить все в `ok` |
+| `GET /control/hits?path=/ok&since=<ISO>` | журнал обращений к целям |
+| `DELETE /control/hits` | очистить журнал |
+
+Пример: «уронить» сайт и поднять обратно, не меняя саму проверку.
+
+```bash
+curl -X PUT localhost:4000/control/switch/site-a -d '{"mode":"error","code":503}'
+curl -X PUT localhost:4000/control/switch/site-a -d '{"mode":"ok"}'
+```
+
+Query-параметры, которые эндпоинт не использует, игнорируются. Так 50
+проверок могут смотреть на `/ok?n=1` … `/ok?n=50` и при этом различаться в
+журнале обращений.
+
 ## Как проверить, что всё работает *(TBD)*
 
 ## Текущее состояние проекта *(TBD)*
