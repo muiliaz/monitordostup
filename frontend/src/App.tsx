@@ -10,12 +10,15 @@ function AdminLayout() {
   const me = useMe();
   const qc = useQueryClient();
 
-  if (me.isLoading) return <p className="container">Загрузка…</p>;
   if (me.error) return <LoginPage />;
+  if (me.isPending) return <p className="container">Загрузка…</p>;
 
   const logout = async () => {
     await api('/auth/logout', { method: 'POST' });
-    qc.clear();
+    // Refetch "me" first: its 401 switches the UI to the login form. Only then
+    // drop the other cached data, so no admin page is left rendering without it.
+    await qc.resetQueries({ queryKey: keys.me });
+    qc.removeQueries({ predicate: (q) => q.queryKey[0] !== keys.me[0] });
   };
 
   return (
