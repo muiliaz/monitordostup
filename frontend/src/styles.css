@@ -106,3 +106,7 @@ a:hover { text-decoration: underline; }
 .nowrap { white-space: nowrap; }
 .badge-maint { color: var(--maint); background: var(--maint-bg); margin-left: 6px; }
 .quick { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.empty-groups { color: var(--muted); margin-top: 8px; }
+.empty-groups summary { cursor: pointer; padding: 6px 0; }
+.empty-groups ul { margin: 4px 0 0; padding-left: 20px; }
+.empty-groups li { padding: 2px 0; color: var(--text); }

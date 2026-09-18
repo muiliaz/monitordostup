@@ -10,6 +10,9 @@ import { StatusBadge } from '../components/StatusBadge';
 import { formatAgo, formatDuration, formatInterval } from '../format';
 import { useNow } from '../useNow';
 
+// Paused checks keep their last status but are not "failing" (same rule as group status).
+const isDown = (c: Check) => !c.isPaused && c.currentStatus === 'down';
+
 type Editing = { mode: 'new' } | { mode: 'edit'; check: Check } | null;
 
 export function ChecksPage() {
@@ -23,10 +26,17 @@ export function ChecksPage() {
   if (checks.error) return <p className="error">Не удалось загрузить проверки</p>;
 
   const all = checks.data ?? [];
-  const sections = [
+  const allSections = [
     ...(groups.data ?? []).map((g) => ({ key: `g${g.id}`, group: g, items: all.filter((c) => c.groupId === g.id) })),
     { key: 'none', group: null, items: all.filter((c) => c.groupId === null) },
-  ].filter((s) => s.group || s.items.length > 0);
+  ];
+  // Groups with a failing check go first (stable sort keeps the API's
+  // alphabetical order inside each tier); failing checks go first inside a group.
+  const sections = allSections
+    .filter((s) => s.items.length > 0)
+    .map((s) => ({ ...s, items: [...s.items].sort((a, b) => Number(isDown(b)) - Number(isDown(a))) }))
+    .sort((a, b) => Number(b.items.some(isDown)) - Number(a.items.some(isDown)));
+  const emptyGroups = allSections.flatMap((s) => (s.group && s.items.length === 0 ? [s.group] : []));
 
   return (
     <section>
@@ -48,30 +58,44 @@ export function ChecksPage() {
             {s.group && <StatusBadge status={s.group.status} />}
             {s.group && <MaintenanceBadge window={activeWindow({ groupId: s.group.id }, windows.data, now)} />}
           </div>
-          {s.items.length === 0 ? (
-            <p className="muted">В группе нет проверок.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Статус</th>
-                  <th>Проверка</th>
-                  <th>Ответ</th>
-                  <th>Последняя проверка</th>
-                  <th>Падение длится</th>
-                  <th>Интервал</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {s.items.map((c) => (
-                  <CheckRow key={c.id} check={c} now={now} maintenance={activeWindow({ checkId: c.id, groupId: c.groupId }, windows.data, now)} onEdit={() => setEditing({ mode: 'edit', check: c })} />
-                ))}
-              </tbody>
-            </table>
-          )}
+          <table>
+            <thead>
+              <tr>
+                <th>Статус</th>
+                <th>Проверка</th>
+                <th>Ответ</th>
+                <th>Последняя проверка</th>
+                <th>Падение длится</th>
+                <th>Интервал</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {s.items.map((c) => (
+                <CheckRow key={c.id} check={c} now={now} maintenance={activeWindow({ checkId: c.id, groupId: c.groupId }, windows.data, now)} onEdit={() => setEditing({ mode: 'edit', check: c })} />
+              ))}
+            </tbody>
+          </table>
         </div>
       ))}
+
+      {emptyGroups.length > 0 && (
+        <details className="empty-groups">
+          <summary>Пустые группы ({emptyGroups.length})</summary>
+          <p className="muted small">
+            В этих группах нет проверок. Добавьте проверку в группу через форму проверки или удалите группу в разделе{' '}
+            <Link to="/groups">«Группы»</Link>.
+          </p>
+          <ul>
+            {emptyGroups.map((g) => (
+              <li key={g.id}>
+                {g.name}
+                <MaintenanceBadge window={activeWindow({ groupId: g.id }, windows.data, now)} />
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </section>
   );
 }
