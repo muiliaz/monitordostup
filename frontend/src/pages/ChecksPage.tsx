@@ -7,6 +7,7 @@ import { MaintenanceBadge } from '../components/MaintenanceBadge';
 import { activeWindow } from '../maintenance';
 import { CheckForm } from '../components/CheckForm';
 import { StatusBadge } from '../components/StatusBadge';
+import { SummaryPanel } from '../components/SummaryPanel';
 import { formatAgo, formatDuration, formatInterval } from '../format';
 import { useNow } from '../useNow';
 
@@ -46,6 +47,8 @@ export function ChecksPage() {
           + Добавить проверку
         </button>
       </div>
+
+      <SummaryPanel />
 
       {editing && <CheckForm key={editing.mode === 'edit' ? editing.check.id : 'new'} check={editing.mode === 'edit' ? editing.check : undefined} onDone={() => setEditing(null)} />}
 

@@ -96,3 +96,13 @@ export interface MaintenanceInput {
   durationMinutes?: number;
   note: string | null;
 }
+
+export interface DashboardSummary {
+  total: number;
+  up: number;
+  down: number;
+  paused: number;
+  unknown: number;
+  uptime24h: number | null;
+  computedAt: string;
+}

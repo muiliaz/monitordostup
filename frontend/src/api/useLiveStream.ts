@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { setServerTime } from '../clock';
 import { keys } from './hooks';
-import type { Check, CheckResult, Group } from './types';
+import type { Check, CheckResult, DashboardSummary, Group } from './types';
 
 export type LiveState = 'connecting' | 'open' | 'reconnecting';
 
@@ -40,6 +40,7 @@ const handlers: Handlers = {
     qc.setQueryData<Group[]>(keys.groups, (list) => list?.map((g) => (g.id === id ? { ...g, status } : g)));
   },
   'maintenance.changed': (qc) => void qc.invalidateQueries({ queryKey: ['maintenance'] }),
+  summary: (qc, summary: DashboardSummary) => qc.setQueryData(keys.summary, summary),
   'groups.changed': (qc) => {
     void qc.invalidateQueries({ queryKey: keys.groups });
     // Group names are embedded in checks.

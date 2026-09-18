@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
-import type { Check, CheckInput, CheckResult, Group, GroupInput, Incident, MaintenanceInput, MaintenanceWindow } from './types';
+import type { Check, CheckInput, DashboardSummary, CheckResult, Group, GroupInput, Incident, MaintenanceInput, MaintenanceWindow } from './types';
 
 export const keys = {
   me: ['me'] as const,
@@ -10,8 +10,8 @@ export const keys = {
   results: (id: number) => ['checks', id, 'results'] as const,
   incidents: (checkId?: number) => ['incidents', checkId ?? 'all'] as const,
   maintenance: (scope: 'current' | 'past') => ['maintenance', scope] as const,
+  summary: ['summary'] as const,
 };
-
 
 export function useMe() {
   return useQuery({ queryKey: keys.me, queryFn: () => api<{ username: string }>('/auth/me'), retry: false });
@@ -32,6 +32,11 @@ export function useResults(id: number, limit = 50) {
 export function useIncidents(checkId?: number) {
   const qs = checkId ? `?checkId=${checkId}` : '';
   return useQuery({ queryKey: keys.incidents(checkId), queryFn: () => api<Incident[]>(`/incidents${qs}`) });
+}
+
+// Pushed by the `summary` SSE event; fetched once on load and on reconnect.
+export function useSummary() {
+  return useQuery({ queryKey: keys.summary, queryFn: () => api<DashboardSummary>('/dashboard/summary') });
 }
 
 export function useGroups() {
