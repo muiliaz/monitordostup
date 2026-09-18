@@ -10,6 +10,7 @@ export type LiveEvent =
   | { type: 'check.result'; data: { checkId: number; id: string; checkedAt: Date; isSuccess: boolean; responseTimeMs: number; httpCode: number | null; errorMessage: string | null } }
   | { type: 'incident.opened'; data: Incident }
   | { type: 'incident.closed'; data: Incident }
+  | { type: 'incident.updated'; data: Incident }
   | { type: 'group.status'; data: { id: number; status: GroupStatus } }
   | { type: 'groups.changed'; data: Record<string, never> };
 

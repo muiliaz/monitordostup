@@ -41,6 +41,9 @@ docker compose up --build
 ```
 
 - Панель: http://localhost:8080 (логин/пароль — `ADMIN_USERNAME` / `ADMIN_PASSWORD` из `.env`)
+- Письма о падении и восстановлении: адреса задаются у группы на странице
+  «Группы». Проверки без группы шлют на `DEFAULT_ALERT_EMAILS` из `.env`.
+  Все письма видны в MailDev.
 - MailDev: http://localhost:1080
 - Backend healthcheck: http://localhost:3000/api/health
 

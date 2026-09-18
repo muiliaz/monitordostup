@@ -99,3 +99,4 @@ a:hover { text-decoration: underline; }
 .live-open .dot { background: var(--up); box-shadow: 0 0 0 3px var(--up-bg); }
 .live-reconnecting { color: var(--down); }
 .live-reconnecting .dot { background: var(--down); }
+.nowrap { white-space: nowrap; }

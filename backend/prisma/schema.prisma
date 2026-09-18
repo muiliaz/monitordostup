@@ -9,6 +9,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum AlertStatus {
+  sending // claimed by the dispatcher, SMTP call in progress
+  sent
+  no_recipients
+  skipped // not needed (e.g. recovery alert when the outage alert never went out)
+}
+
 enum CheckStatus {
   unknown
   up
@@ -90,6 +97,14 @@ model Incident {
   durationSec  Int?      @map("duration_sec")
   // Error of the check that crossed the threshold, for the journal.
   cause        String?
+
+  // Alert state lives on the incident: the dispatcher sends whatever is due
+  // according to these columns (see alerts/dispatcher.ts). *_at is set when the
+  // alert was handled (sent, or deliberately not sent), status says how.
+  downAlertStatus AlertStatus? @map("down_alert_status")
+  downAlertAt     DateTime?    @map("down_alert_at") @db.Timestamptz(3)
+  upAlertStatus   AlertStatus? @map("up_alert_status")
+  upAlertAt       DateTime?    @map("up_alert_at") @db.Timestamptz(3)
 
   check Check @relation(fields: [checkId], references: [id], onDelete: Cascade)
 

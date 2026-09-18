@@ -9,9 +9,11 @@ import { groupRoutes } from './routes/groups.js';
 import { historyRoutes } from './routes/history.js';
 import { closeAllStreams, streamRoutes } from './live/stream.js';
 import { Scheduler } from './scheduler/scheduler.js';
+import { AlertDispatcher } from './alerts/dispatcher.js';
 
 const app = Fastify({ logger: true });
-const scheduler = new Scheduler(app.log.child({ component: 'scheduler' }));
+const alerts = new AlertDispatcher(app.log.child({ component: 'alerts' }));
+const scheduler = new Scheduler(app.log.child({ component: 'scheduler' }), () => alerts.kick());
 registerErrorHandler(app);
 await app.register(cookie, { secret: config.sessionSecret });
 
@@ -34,6 +36,7 @@ await app.register(async (admin) => {
 async function shutdown(signal: string) {
   app.log.info({ signal }, 'shutting down');
   await scheduler.stop();
+  alerts.stop();
   closeAllStreams();
   await app.close();
   await prisma.$disconnect();
@@ -44,3 +47,4 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 
 await app.listen({ host: '0.0.0.0', port: config.port });
 await scheduler.start();
+alerts.start();

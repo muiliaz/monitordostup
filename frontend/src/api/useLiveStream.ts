@@ -34,6 +34,7 @@ const handlers: Handlers = {
   },
   'incident.opened': (qc) => void qc.invalidateQueries({ queryKey: ['incidents'] }),
   'incident.closed': (qc) => void qc.invalidateQueries({ queryKey: ['incidents'] }),
+  'incident.updated': (qc) => void qc.invalidateQueries({ queryKey: ['incidents'] }),
   'group.status': (qc, { id, status }: { id: number; status: Group['status'] }) => {
     qc.setQueryData<Group[]>(keys.groups, (list) => list?.map((g) => (g.id === id ? { ...g, status } : g)));
   },

@@ -1,4 +1,5 @@
 export type CheckStatus = 'unknown' | 'up' | 'down';
+export type AlertStatus = 'sending' | 'sent' | 'no_recipients' | 'skipped';
 
 export interface GroupRef {
   id: number;
@@ -68,5 +69,9 @@ export interface Incident {
   endedAt: string | null;
   durationSec: number | null;
   cause: string | null;
+  downAlertStatus: AlertStatus | null;
+  downAlertAt: string | null;
+  upAlertStatus: AlertStatus | null;
+  upAlertAt: string | null;
   check?: { id: number; name: string; url: string };
 }

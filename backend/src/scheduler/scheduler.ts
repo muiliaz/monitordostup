@@ -45,7 +45,11 @@ export class Scheduler {
   private samples: RunSample[] = [];
   private runsTotal = 0;
 
-  constructor(private readonly log: FastifyBaseLogger) {}
+  constructor(
+    private readonly log: FastifyBaseLogger,
+    // Called after a status transition is committed (used to kick alerts).
+    private readonly onTransition: () => void = () => {},
+  ) {}
 
   async start() {
     // Single backend instance: any lock left in the DB belongs to a previous
@@ -162,6 +166,7 @@ export class Scheduler {
       // The result is already committed; a failed publish only costs live freshness.
       if (applied) await publishApplied(applied).catch((err) => this.log.error({ err, checkId: check.id }, 'live publish failed'));
       if (applied?.transition) {
+        this.onTransition();
         this.log.info({ checkId: check.id, transition: applied.transition.kind, incidentId: applied.incident?.id }, 'status changed');
       }
     } catch (err) {

@@ -63,6 +63,11 @@ export function GroupsPage() {
 
       {editing && <GroupForm key={editing === 'new' ? 'new' : editing.id} group={editing === 'new' ? undefined : editing} onDone={() => setEditing(null)} />}
 
+      <p className="muted small">
+        Письма о падении и восстановлении проверки уходят на адреса её группы. Для проверок без группы — на адреса из
+        переменной <code>DEFAULT_ALERT_EMAILS</code> в <code>.env</code>.
+      </p>
+
       <div className="card">
         {groups.data?.length === 0 ? (
           <p className="muted">Групп пока нет.</p>
