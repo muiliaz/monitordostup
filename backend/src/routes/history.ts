@@ -35,7 +35,7 @@ export async function historyRoutes(app: FastifyInstance) {
       },
       orderBy: { startedAt: 'desc' },
       take: q.limit,
-      include: { check: { select: { id: true, name: true, url: true } } },
+      include: { check: { select: { id: true, name: true, url: true, groupId: true } } },
     });
   });
 }

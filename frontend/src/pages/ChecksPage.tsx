@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../api/client';
-import { useCheckAction, useChecks, useGroups } from '../api/hooks';
-import type { Check } from '../api/types';
+import { useCheckAction, useChecks, useGroups, useMaintenance } from '../api/hooks';
+import type { Check, MaintenanceWindow } from '../api/types';
+import { MaintenanceBadge } from '../components/MaintenanceBadge';
+import { activeWindow } from '../maintenance';
 import { CheckForm } from '../components/CheckForm';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatAgo, formatDuration, formatInterval } from '../format';
@@ -13,6 +15,7 @@ type Editing = { mode: 'new' } | { mode: 'edit'; check: Check } | null;
 export function ChecksPage() {
   const checks = useChecks();
   const groups = useGroups();
+  const windows = useMaintenance('current');
   const [editing, setEditing] = useState<Editing>(null);
   const now = useNow();
 
@@ -43,6 +46,7 @@ export function ChecksPage() {
           <div className="group-header">
             <h3>{s.group ? s.group.name : 'Без группы'}</h3>
             {s.group && <StatusBadge status={s.group.status} />}
+            {s.group && <MaintenanceBadge window={activeWindow({ groupId: s.group.id }, windows.data, now)} />}
           </div>
           {s.items.length === 0 ? (
             <p className="muted">В группе нет проверок.</p>
@@ -61,7 +65,7 @@ export function ChecksPage() {
               </thead>
               <tbody>
                 {s.items.map((c) => (
-                  <CheckRow key={c.id} check={c} now={now} onEdit={() => setEditing({ mode: 'edit', check: c })} />
+                  <CheckRow key={c.id} check={c} now={now} maintenance={activeWindow({ checkId: c.id, groupId: c.groupId }, windows.data, now)} onEdit={() => setEditing({ mode: 'edit', check: c })} />
                 ))}
               </tbody>
             </table>
@@ -72,7 +76,7 @@ export function ChecksPage() {
   );
 }
 
-function CheckRow({ check: c, now, onEdit }: { check: Check; now: number; onEdit: () => void }) {
+function CheckRow({ check: c, now, maintenance, onEdit }: { check: Check; now: number; maintenance: MaintenanceWindow | null; onEdit: () => void }) {
   const action = useCheckAction();
   const downFor = c.currentStatus === 'down' && c.statusChangedAt ? now - new Date(c.statusChangedAt).getTime() : null;
 
@@ -80,6 +84,7 @@ function CheckRow({ check: c, now, onEdit }: { check: Check; now: number; onEdit
     <tr>
       <td>
         <StatusBadge status={c.currentStatus} paused={c.isPaused} />
+        <MaintenanceBadge window={maintenance} />
         {c.isRunning && <div className="muted small">идёт проверка…</div>}
       </td>
       <td>

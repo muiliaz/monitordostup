@@ -3,6 +3,7 @@ import type { AlertStatus, Incident } from '@prisma/client';
 import { config } from '../config.js';
 import { prisma } from '../db.js';
 import { bus } from '../live/bus.js';
+import { windowAt } from '../maintenance/windows.js';
 import { sendMail } from './mailer.js';
 import { downAlert, upAlert, type AlertContext } from './templates.js';
 
@@ -24,7 +25,10 @@ const COLUMNS = {
 //     periodic run and a kick() never send the same alert twice;
 //   - a failed send releases the claim and is retried on the next run;
 //   - nothing is lost if the process dies between the status change and
-//     the send: the next process finds the incident still unalerted.
+//     the send: the next process finds the incident still unalerted;
+//   - maintenance windows hold alerts back instead of dropping them: a DOWN
+//     alert still due when the window ends goes out on the next run; an
+//     outage that started and ended inside a window is suppressed entirely.
 export class AlertDispatcher {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
@@ -74,7 +78,7 @@ export class AlertDispatcher {
 
     // UP alerts: closed incidents whose DOWN alert is settled.
     const dueUp = await prisma.incident.findMany({
-      where: { endedAt: { not: null }, upAlertAt: null, downAlertStatus: { in: ['sent', 'no_recipients', 'skipped'] } },
+      where: { endedAt: { not: null }, upAlertAt: null, downAlertStatus: { in: ['sent', 'no_recipients', 'skipped', 'suppressed'] } },
       orderBy: { endedAt: 'asc' },
       take: BATCH,
     });
@@ -86,10 +90,28 @@ export class AlertDispatcher {
   }
 
   private async handle(incident: Incident, kind: Kind) {
-    if (!(await this.claim(incident.id, kind))) return; // someone else took it
-
     const check = await prisma.check.findUnique({ where: { id: incident.checkId }, include: { group: true } });
     if (!check) return; // check deleted: its incidents are cascade-deleted too
+
+    const now = new Date();
+    if (await windowAt(check, now)) {
+      // Outage fully inside maintenance (recovered before any window ended):
+      // nobody needs either email.
+      if (kind === 'down' && incident.endedAt && (await windowAt(check, incident.endedAt))) {
+        await this.settle(incident.id, 'down', 'suppressed');
+        this.log.info({ incidentId: incident.id, checkId: check.id }, 'alert suppressed: outage inside maintenance window');
+      }
+      // Otherwise hold it back; the periodic run sends it once the window is over.
+      return;
+    }
+    if (kind === 'down' && incident.endedAt && (await windowAt(check, incident.endedAt))) {
+      // Recovered inside a window that is already over: still fully covered.
+      await this.settle(incident.id, 'down', 'suppressed');
+      this.log.info({ incidentId: incident.id, checkId: check.id }, 'alert suppressed: outage inside maintenance window');
+      return;
+    }
+
+    if (!(await this.claim(incident.id, kind))) return; // someone else took it
 
     const recipients = check.group ? check.group.alertEmails : config.defaultAlertEmails;
     if (recipients.length === 0) {
@@ -106,6 +128,7 @@ export class AlertDispatcher {
       endedAt: incident.endedAt,
       durationSec: incident.durationSec,
       cause: incident.cause,
+      maintenanceEndedAt: kind === 'down' ? (await windowAt(check, incident.startedAt))?.endsAt ?? null : null,
     };
     try {
       await sendMail({ to: recipients, ...(kind === 'down' ? downAlert(ctx) : upAlert(ctx)) });

@@ -1,4 +1,6 @@
 :root {
+  --maint: #92400e;
+  --maint-bg: #fef3c7;
   --bg: #f5f6f8;
   --surface: #ffffff;
   --text: #1c1f24;
@@ -25,6 +27,8 @@
     --down: #f87171;
     --down-bg: #3d1717;
     --neutral-bg: #262a31;
+    --maint: #fbbf24;
+    --maint-bg: #3a2c0c;
     color-scheme: dark;
   }
 }
@@ -100,3 +104,5 @@ a:hover { text-decoration: underline; }
 .live-reconnecting { color: var(--down); }
 .live-reconnecting .dot { background: var(--down); }
 .nowrap { white-space: nowrap; }
+.badge-maint { color: var(--maint); background: var(--maint-bg); margin-left: 6px; }
+.quick { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }

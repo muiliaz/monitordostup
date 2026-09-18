@@ -12,7 +12,8 @@ export type LiveEvent =
   | { type: 'incident.closed'; data: Incident }
   | { type: 'incident.updated'; data: Incident }
   | { type: 'group.status'; data: { id: number; status: GroupStatus } }
-  | { type: 'groups.changed'; data: Record<string, never> };
+  | { type: 'groups.changed'; data: Record<string, never> }
+  | { type: 'maintenance.changed'; data: Record<string, never> };
 
 type Listener = (event: LiveEvent) => void;
 

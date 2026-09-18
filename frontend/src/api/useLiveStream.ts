@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { setServerTime } from '../clock';
 import { keys } from './hooks';
 import type { Check, CheckResult, Group } from './types';
 
@@ -38,6 +39,7 @@ const handlers: Handlers = {
   'group.status': (qc, { id, status }: { id: number; status: Group['status'] }) => {
     qc.setQueryData<Group[]>(keys.groups, (list) => list?.map((g) => (g.id === id ? { ...g, status } : g)));
   },
+  'maintenance.changed': (qc) => void qc.invalidateQueries({ queryKey: ['maintenance'] }),
   'groups.changed': (qc) => {
     void qc.invalidateQueries({ queryKey: keys.groups });
     // Group names are embedded in checks.
@@ -61,6 +63,7 @@ export function useLiveStream(url: string): LiveState {
     // EventSource reconnects by itself (server sends retry: 3000).
     es.onerror = () => setState('reconnecting');
 
+    es.addEventListener('hello', (e) => setServerTime(JSON.parse((e as MessageEvent).data).serverTime));
     for (const [type, handle] of Object.entries(handlers)) {
       es.addEventListener(type, (e) => handle(qc, JSON.parse((e as MessageEvent).data)));
     }

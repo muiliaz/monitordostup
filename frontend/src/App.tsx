@@ -7,6 +7,7 @@ import { LiveIndicator } from './components/LiveIndicator';
 import { CheckDetailsPage } from './pages/CheckDetailsPage';
 import { ChecksPage } from './pages/ChecksPage';
 import { IncidentsPage } from './pages/IncidentsPage';
+import { MaintenancePage } from './pages/MaintenancePage';
 import { GroupsPage } from './pages/GroupsPage';
 import { LoginPage } from './pages/LoginPage';
 
@@ -40,6 +41,7 @@ function AdminShell({ username }: { username: string }) {
             Проверки
           </NavLink>
           <NavLink to="/incidents">Инциденты</NavLink>
+          <NavLink to="/maintenance">Обслуживание</NavLink>
           <NavLink to="/groups">Группы</NavLink>
         </nav>
         <span className="spacer" />
@@ -52,6 +54,7 @@ function AdminShell({ username }: { username: string }) {
           <Route path="/" element={<ChecksPage />} />
           <Route path="/checks/:id" element={<CheckDetailsPage />} />
           <Route path="/incidents" element={<IncidentsPage />} />
+          <Route path="/maintenance" element={<MaintenancePage />} />
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

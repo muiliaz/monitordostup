@@ -14,6 +14,7 @@ enum AlertStatus {
   sent
   no_recipients
   skipped // not needed (e.g. recovery alert when the outage alert never went out)
+  suppressed // the whole outage happened inside a maintenance window
 }
 
 enum CheckStatus {
@@ -28,7 +29,8 @@ model Group {
   alertEmails String[] @default([]) @map("alert_emails")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  checks Check[]
+  checks             Check[]
+  maintenanceWindows MaintenanceWindow[]
 
   @@map("groups")
 }
@@ -64,8 +66,9 @@ model Check {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
   group     Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  results   CheckResult[]
-  incidents Incident[]
+  results            CheckResult[]
+  incidents          Incident[]
+  maintenanceWindows MaintenanceWindow[]
 
   @@index([groupId])
   // Scheduler picks due checks: WHERE is_paused = false AND next_run_at <= now().
@@ -112,4 +115,26 @@ model Incident {
   @@index([startedAt])
   // + partial unique index "one open incident per check", see migration.sql
   @@map("incidents")
+}
+
+// Planned works for exactly one check OR one group (CHECK constraint in
+// migration.sql). Checks keep running and statuses keep updating during a
+// window; only alerts are held back (see alerts/dispatcher.ts).
+model MaintenanceWindow {
+  id        Int      @id @default(autoincrement())
+  checkId   Int?     @map("check_id")
+  groupId   Int?     @map("group_id")
+  startsAt  DateTime @map("starts_at") @db.Timestamptz(3)
+  endsAt    DateTime @map("ends_at") @db.Timestamptz(3)
+  note      String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  check Check? @relation(fields: [checkId], references: [id], onDelete: Cascade)
+  group Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // "Is this check/group in maintenance at time T": filter by target, then ends_at > T.
+  @@index([checkId, endsAt])
+  @@index([groupId, endsAt])
+  @@index([endsAt])
+  @@map("maintenance_windows")
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
-import type { Check, CheckInput, CheckResult, Group, GroupInput, Incident } from './types';
+import type { Check, CheckInput, CheckResult, Group, GroupInput, Incident, MaintenanceInput, MaintenanceWindow } from './types';
 
 export const keys = {
   me: ['me'] as const,
@@ -9,6 +9,7 @@ export const keys = {
   check: (id: number) => ['checks', id] as const,
   results: (id: number) => ['checks', id, 'results'] as const,
   incidents: (checkId?: number) => ['incidents', checkId ?? 'all'] as const,
+  maintenance: (scope: 'current' | 'past') => ['maintenance', scope] as const,
 };
 
 
@@ -81,5 +82,22 @@ export function useDeleteGroup() {
   return useMutation({
     mutationFn: (id: number) => api<void>(`/groups/${id}`, { method: 'DELETE' }),
     onSuccess: invalidate,
+  });
+}
+
+export function useMaintenance(scope: 'current' | 'past') {
+  return useQuery({ queryKey: keys.maintenance(scope), queryFn: () => api<MaintenanceWindow[]>(`/maintenance?scope=${scope}`) });
+}
+
+export function useMaintenanceAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (a: { kind: 'create'; input: MaintenanceInput } | { kind: 'end' | 'delete'; id: number }) =>
+      a.kind === 'create'
+        ? api<MaintenanceWindow>('/maintenance', { method: 'POST', body: a.input })
+        : a.kind === 'end'
+          ? api<MaintenanceWindow>(`/maintenance/${a.id}/end`, { method: 'POST' })
+          : api<MaintenanceWindow | void>(`/maintenance/${a.id}`, { method: 'DELETE' }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['maintenance'] }),
   });
 }

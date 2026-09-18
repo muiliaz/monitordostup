@@ -1,5 +1,5 @@
 export type CheckStatus = 'unknown' | 'up' | 'down';
-export type AlertStatus = 'sending' | 'sent' | 'no_recipients' | 'skipped';
+export type AlertStatus = 'sending' | 'sent' | 'no_recipients' | 'skipped' | 'suppressed';
 
 export interface GroupRef {
   id: number;
@@ -73,5 +73,26 @@ export interface Incident {
   downAlertAt: string | null;
   upAlertStatus: AlertStatus | null;
   upAlertAt: string | null;
-  check?: { id: number; name: string; url: string };
+  check?: { id: number; name: string; url: string; groupId: number | null };
+}
+
+export interface MaintenanceWindow {
+  id: number;
+  checkId: number | null;
+  groupId: number | null;
+  startsAt: string;
+  endsAt: string;
+  note: string | null;
+  check: GroupRef | null;
+  group: GroupRef | null;
+}
+
+// Either startsAt+endsAt, or only durationMinutes (= starts now by the server clock).
+export interface MaintenanceInput {
+  checkId: number | null;
+  groupId: number | null;
+  startsAt?: string;
+  endsAt?: string;
+  durationMinutes?: number;
+  note: string | null;
 }

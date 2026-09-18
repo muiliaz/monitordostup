@@ -9,6 +9,8 @@ export interface AlertContext {
   endedAt: Date | null;
   durationSec: number | null;
   cause: string | null;
+  // Set when the outage began inside a maintenance window that has since ended.
+  maintenanceEndedAt?: Date | null;
 }
 
 const fmtTime = (d: Date) =>
@@ -39,6 +41,9 @@ export function downAlert(ctx: AlertContext): Omit<Mail, 'to'> {
       ['URL', ctx.url],
       ['Недоступен с', fmtTime(ctx.startedAt)],
       ['Причина', ctx.cause ?? 'неизвестна'],
+      ...(ctx.maintenanceEndedAt
+        ? ([['Примечание', `падение началось во время планового обслуживания; окно закончилось ${fmtTime(ctx.maintenanceEndedAt)}, а сайт всё ещё недоступен`]] as [string, string][])
+        : []),
     ],
     `${config.publicBaseUrl}/checks/${ctx.checkId}`,
   );
