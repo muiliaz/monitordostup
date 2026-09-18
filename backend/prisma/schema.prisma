@@ -8,3 +8,55 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+enum CheckStatus {
+  unknown
+  up
+  down
+}
+
+model Group {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  alertEmails String[] @default([]) @map("alert_emails")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  checks Check[]
+
+  @@map("groups")
+}
+
+model Check {
+  id                    Int     @id @default(autoincrement())
+  groupId               Int?    @map("group_id")
+  name                  String
+  url                   String
+  intervalSec           Int     @map("interval_sec")
+  timeoutMs             Int     @map("timeout_ms")
+  expectedStatus        Int     @default(200) @map("expected_status")
+  expectedBodySubstring String? @map("expected_body_substring")
+  isPaused              Boolean @default(false) @map("is_paused")
+  isPublic              Boolean @default(false) @map("is_public")
+
+  // Scheduler state, persisted so it survives a backend restart.
+  nextRunAt DateTime  @default(now()) @map("next_run_at") @db.Timestamptz(3)
+  isRunning Boolean   @default(false) @map("is_running")
+  lockedAt  DateTime? @map("locked_at") @db.Timestamptz(3)
+
+  // Monitoring state.
+  consecutiveFailures  Int         @default(0) @map("consecutive_failures")
+  consecutiveSuccesses Int         @default(0) @map("consecutive_successes")
+  currentStatus        CheckStatus @default(unknown) @map("current_status")
+  statusChangedAt      DateTime?   @map("status_changed_at") @db.Timestamptz(3)
+  lastCheckedAt        DateTime?   @map("last_checked_at") @db.Timestamptz(3)
+  lastResponseTimeMs   Int?        @map("last_response_time_ms")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  group Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@index([groupId])
+  // Scheduler picks due checks: WHERE is_paused = false AND next_run_at <= now().
+  @@index([isPaused, nextRunAt])
+  @@map("checks")
+}

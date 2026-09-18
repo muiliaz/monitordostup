@@ -1,12 +1,28 @@
 import Fastify from 'fastify';
+import cookie from '@fastify/cookie';
 import { config } from './config.js';
 import { prisma } from './db.js';
+import { registerErrorHandler } from './errors.js';
+import { authRoutes, requireAdmin } from './auth.js';
+import { checkRoutes } from './routes/checks.js';
+import { groupRoutes } from './routes/groups.js';
 
 const app = Fastify({ logger: true });
+registerErrorHandler(app);
+await app.register(cookie, { secret: config.sessionSecret });
 
 app.get('/api/health', async () => {
   await prisma.$queryRaw`SELECT 1`;
   return { status: 'ok' };
+});
+
+await app.register(authRoutes);
+
+// Everything registered inside this scope requires the admin session.
+await app.register(async (admin) => {
+  admin.addHook('preHandler', requireAdmin);
+  await admin.register(checkRoutes);
+  await admin.register(groupRoutes);
 });
 
 async function shutdown(signal: string) {
