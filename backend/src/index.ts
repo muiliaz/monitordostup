@@ -11,6 +11,7 @@ import { maintenanceRoutes } from './routes/maintenance.js';
 import { closeAllStreams, streamRoutes } from './live/stream.js';
 import { Scheduler } from './scheduler/scheduler.js';
 import { AlertDispatcher } from './alerts/dispatcher.js';
+import { startSummaryPublisher } from './dashboard/summary.js';
 
 const app = Fastify({ logger: true });
 const alerts = new AlertDispatcher(app.log.child({ component: 'alerts' }));
@@ -35,8 +36,11 @@ await app.register(async (admin) => {
   await admin.register(streamRoutes);
 });
 
+const stopSummary = startSummaryPublisher(app.log.child({ component: 'summary' }));
+
 async function shutdown(signal: string) {
   app.log.info({ signal }, 'shutting down');
+  stopSummary();
   await scheduler.stop();
   alerts.stop();
   closeAllStreams();

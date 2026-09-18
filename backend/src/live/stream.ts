@@ -54,7 +54,11 @@ export function openEventStream(
 
 export async function streamRoutes(app: FastifyInstance) {
   app.get('/api/stream', (req, reply) => openEventStream(req, reply));
-  app.get('/api/stream/clients', async () => ({ clients: bus.subscriberCount }));
+  app.get('/api/stream/clients', async () => ({ clients: openStreams.size }));
+}
+
+export function openStreamCount(): number {
+  return openStreams.size;
 }
 
 // Long-lived streams would keep the server from closing on shutdown.

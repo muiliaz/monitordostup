@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type { Check, Incident } from '@prisma/client';
 import type { GroupStatus } from '../monitor/groupStatus.js';
+import type { DashboardSummary } from '../dashboard/summary.js';
 
 // Everything the UI needs to stay current without refetching lists.
 // check.upsert carries either a full check or a partial patch (always with id).
@@ -13,7 +14,8 @@ export type LiveEvent =
   | { type: 'incident.updated'; data: Incident }
   | { type: 'group.status'; data: { id: number; status: GroupStatus } }
   | { type: 'groups.changed'; data: Record<string, never> }
-  | { type: 'maintenance.changed'; data: Record<string, never> };
+  | { type: 'maintenance.changed'; data: Record<string, never> }
+  | { type: 'summary'; data: DashboardSummary };
 
 type Listener = (event: LiveEvent) => void;
 
