@@ -6,6 +6,7 @@ import { registerErrorHandler } from './errors.js';
 import { authRoutes, requireAdmin } from './auth.js';
 import { checkRoutes } from './routes/checks.js';
 import { groupRoutes } from './routes/groups.js';
+import { historyRoutes } from './routes/history.js';
 import { Scheduler } from './scheduler/scheduler.js';
 
 const app = Fastify({ logger: true });
@@ -25,6 +26,7 @@ await app.register(async (admin) => {
   admin.addHook('preHandler', requireAdmin);
   await admin.register(checkRoutes, { scheduler });
   await admin.register(groupRoutes);
+  await admin.register(historyRoutes);
 });
 
 async function shutdown(signal: string) {

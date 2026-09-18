@@ -50,3 +50,23 @@ export interface GroupInput {
   name: string;
   alertEmails: string[];
 }
+
+export interface CheckResult {
+  id: string;
+  checkId: number;
+  checkedAt: string;
+  isSuccess: boolean;
+  responseTimeMs: number;
+  httpCode: number | null;
+  errorMessage: string | null;
+}
+
+export interface Incident {
+  id: number;
+  checkId: number;
+  startedAt: string;
+  endedAt: string | null;
+  durationSec: number | null;
+  cause: string | null;
+  check?: { id: number; name: string; url: string };
+}

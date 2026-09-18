@@ -20,3 +20,7 @@ export function formatInterval(sec: number): string {
   if (sec % 60 === 0) return `${sec / 60} мин`;
   return `${sec} с`;
 }
+
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}

@@ -46,6 +46,9 @@ model Check {
   // Monitoring state.
   consecutiveFailures  Int         @default(0) @map("consecutive_failures")
   consecutiveSuccesses Int         @default(0) @map("consecutive_successes")
+  // Time of the first failure in the current failure streak (null while passing).
+  // Becomes the incident start once the threshold is reached.
+  failingSince         DateTime?   @map("failing_since") @db.Timestamptz(3)
   currentStatus        CheckStatus @default(unknown) @map("current_status")
   statusChangedAt      DateTime?   @map("status_changed_at") @db.Timestamptz(3)
   lastCheckedAt        DateTime?   @map("last_checked_at") @db.Timestamptz(3)
@@ -53,10 +56,45 @@ model Check {
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  group Group? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  group     Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  results   CheckResult[]
+  incidents Incident[]
 
   @@index([groupId])
   // Scheduler picks due checks: WHERE is_paused = false AND next_run_at <= now().
   @@index([isPaused, nextRunAt])
   @@map("checks")
+}
+
+model CheckResult {
+  id             BigInt   @id @default(autoincrement())
+  checkId        Int      @map("check_id")
+  checkedAt      DateTime @map("checked_at") @db.Timestamptz(3)
+  isSuccess      Boolean  @map("is_success")
+  responseTimeMs Int      @map("response_time_ms")
+  httpCode       Int?     @map("http_code")
+  errorMessage   String?  @map("error_message")
+
+  check Check @relation(fields: [checkId], references: [id], onDelete: Cascade)
+
+  // Every history query is "one check, time range": this index serves all of them.
+  @@index([checkId, checkedAt])
+  @@map("check_results")
+}
+
+model Incident {
+  id           Int       @id @default(autoincrement())
+  checkId      Int       @map("check_id")
+  startedAt    DateTime  @map("started_at") @db.Timestamptz(3)
+  endedAt      DateTime? @map("ended_at") @db.Timestamptz(3)
+  durationSec  Int?      @map("duration_sec")
+  // Error of the check that crossed the threshold, for the journal.
+  cause        String?
+
+  check Check @relation(fields: [checkId], references: [id], onDelete: Cascade)
+
+  @@index([checkId, startedAt])
+  @@index([startedAt])
+  // + partial unique index "one open incident per check", see migration.sql
+  @@map("incidents")
 }

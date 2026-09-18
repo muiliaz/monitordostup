@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import { useCheckAction, useChecks, useGroups } from '../api/hooks';
 import type { Check } from '../api/types';
@@ -83,7 +84,7 @@ function CheckRow({ check: c, now, onEdit }: { check: Check; now: number; onEdit
       </td>
       <td>
         <div className="check-name">
-          {c.name} {c.isPublic && <span className="tag">публичная</span>}
+          <Link to={`/checks/${c.id}`}>{c.name}</Link> {c.isPublic && <span className="tag">публичная</span>}
         </div>
         <div className="muted small">{c.url}</div>
       </td>

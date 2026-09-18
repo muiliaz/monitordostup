@@ -147,13 +147,17 @@ export class Scheduler {
       // Manual runs restart the grid from now; scheduled runs keep their grid.
       const anchor = manual ? startedAt : check.scheduledAt;
       const nextRunAt = computeNextRunAt(anchor, finishedAt, check.intervalSec);
-      await applyResult(check.id, result, finishedAt, nextRunAt);
+      // History is keyed by the moment the request was sent.
+      const applied = await applyResult(check.id, result, startedAt, nextRunAt);
 
       this.record({ at: finishedAt.getTime(), checkId: check.id, lagMs, durationMs: result.responseTimeMs });
       this.log.info(
         { checkId: check.id, manual, lagMs, durationMs: result.responseTimeMs, ok: result.isSuccess, httpCode: result.httpCode, error: result.errorMessage ?? undefined },
         'check finished',
       );
+      if (applied?.transition) {
+        this.log.info({ checkId: check.id, transition: applied.transition.kind, incidentId: applied.incident?.id }, 'status changed');
+      }
     } catch (err) {
       // Lock stays set; it is reclaimed as stale after timeout + grace.
       this.log.error({ err, checkId: check.id }, 'check execution failed');

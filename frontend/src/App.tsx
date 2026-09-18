@@ -2,7 +2,9 @@ import { NavLink, Navigate, Route, Routes } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from './api/client';
 import { keys, useMe } from './api/hooks';
+import { CheckDetailsPage } from './pages/CheckDetailsPage';
 import { ChecksPage } from './pages/ChecksPage';
+import { IncidentsPage } from './pages/IncidentsPage';
 import { GroupsPage } from './pages/GroupsPage';
 import { LoginPage } from './pages/LoginPage';
 
@@ -29,6 +31,7 @@ function AdminLayout() {
           <NavLink to="/" end>
             Проверки
           </NavLink>
+          <NavLink to="/incidents">Инциденты</NavLink>
           <NavLink to="/groups">Группы</NavLink>
         </nav>
         <span className="spacer" />
@@ -38,6 +41,8 @@ function AdminLayout() {
       <main className="container">
         <Routes>
           <Route path="/" element={<ChecksPage />} />
+          <Route path="/checks/:id" element={<CheckDetailsPage />} />
+          <Route path="/incidents" element={<IncidentsPage />} />
           <Route path="/groups" element={<GroupsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,20 +1,77 @@
+import type { Check, CheckResult, Incident } from '@prisma/client';
 import { prisma } from '../db.js';
 import type { ProbeResult } from '../scheduler/httpProbe.js';
+import { evaluate, type Transition } from './transitions.js';
 
-// Stage 4: persist the last-run data and streak counters, release the lock.
-// Thresholds, statuses, incidents and history come in stage 5.
-export async function applyResult(checkId: number, result: ProbeResult, finishedAt: Date, nextRunAt: Date) {
-  // updateMany: the check may have been deleted while it was running.
-  await prisma.check.updateMany({
-    where: { id: checkId },
-    data: {
-      isRunning: false,
-      lockedAt: null,
-      nextRunAt,
-      lastCheckedAt: finishedAt,
-      lastResponseTimeMs: result.responseTimeMs,
-      consecutiveFailures: result.isSuccess ? 0 : { increment: 1 },
-      consecutiveSuccesses: result.isSuccess ? { increment: 1 } : 0,
-    },
+export interface AppliedResult {
+  check: Check;
+  result: CheckResult;
+  transition: Transition;
+  incident: Incident | null; // opened or closed by this result
+}
+
+// Records one probe result and everything that follows from it in a single
+// transaction: history row, streak counters, status, incident open/close,
+// scheduling fields and lock release. Returns null if the check was deleted
+// while it was running.
+export async function applyResult(checkId: number, probe: ProbeResult, checkedAt: Date, nextRunAt: Date): Promise<AppliedResult | null> {
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.check.findUnique({ where: { id: checkId } });
+    if (!current) return null;
+
+    const result = await tx.checkResult.create({
+      data: {
+        checkId,
+        checkedAt,
+        isSuccess: probe.isSuccess,
+        responseTimeMs: probe.responseTimeMs,
+        httpCode: probe.httpCode,
+        errorMessage: probe.errorMessage,
+      },
+    });
+
+    const { state, transition } = evaluate(current, probe.isSuccess, checkedAt);
+
+    // Only monitoring fields are written: the config (url, interval, …) may
+    // have been edited while the probe was running and must not be reverted.
+    const check = await tx.check.update({
+      where: { id: checkId },
+      data: {
+        currentStatus: state.currentStatus,
+        consecutiveFailures: state.consecutiveFailures,
+        consecutiveSuccesses: state.consecutiveSuccesses,
+        failingSince: state.failingSince,
+        statusChangedAt: state.statusChangedAt,
+        isRunning: false,
+        lockedAt: null,
+        nextRunAt,
+        lastCheckedAt: checkedAt,
+        lastResponseTimeMs: probe.responseTimeMs,
+      },
+    });
+
+    let incident: Incident | null = null;
+    if (transition?.kind === 'went_down') {
+      // ON CONFLICT DO NOTHING against the "one open incident per check" index:
+      // if an open incident somehow exists already, keep it instead of failing.
+      const rows = await tx.$queryRaw<Incident[]>`
+        INSERT INTO incidents (check_id, started_at, cause)
+        VALUES (${checkId}, ${transition.startedAt}, ${probe.errorMessage})
+        ON CONFLICT DO NOTHING
+        RETURNING id, check_id AS "checkId", started_at AS "startedAt", ended_at AS "endedAt",
+                  duration_sec AS "durationSec", cause`;
+      incident = rows[0] ?? null;
+    } else if (transition?.kind === 'recovered') {
+      const rows = await tx.$queryRaw<Incident[]>`
+        UPDATE incidents
+        SET ended_at = ${checkedAt},
+            duration_sec = GREATEST(0, ROUND(EXTRACT(EPOCH FROM (${checkedAt}::timestamptz - started_at))))::int
+        WHERE check_id = ${checkId} AND ended_at IS NULL
+        RETURNING id, check_id AS "checkId", started_at AS "startedAt", ended_at AS "endedAt",
+                  duration_sec AS "durationSec", cause`;
+      incident = rows[0] ?? null;
+    }
+
+    return { check, result, transition, incident };
   });
 }
