@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from './client';
-import type { Check, CheckInput, DashboardSummary, CheckResult, Group, GroupInput, Incident, MaintenanceInput, MaintenanceWindow } from './types';
+import type { Check, CheckInput, CheckStats, DashboardSummary, StatsRange, CheckResult, Group, GroupInput, Incident, MaintenanceInput, MaintenanceWindow } from './types';
 
 export const keys = {
   me: ['me'] as const,
@@ -8,6 +8,7 @@ export const keys = {
   groups: ['groups'] as const,
   check: (id: number) => ['checks', id] as const,
   results: (id: number) => ['checks', id, 'results'] as const,
+  stats: (id: number, range: StatsRange) => ['checks', id, 'stats', range] as const,
   incidents: (checkId?: number) => ['incidents', checkId ?? 'all'] as const,
   maintenance: (scope: 'current' | 'past') => ['maintenance', scope] as const,
   summary: ['summary'] as const,
@@ -27,6 +28,17 @@ export function useCheck(id: number) {
 
 export function useResults(id: number, limit = 50) {
   return useQuery({ queryKey: keys.results(id), queryFn: () => api<CheckResult[]>(`/checks/${id}/results?limit=${limit}`) });
+}
+
+// Charts: the previous range stays on screen while the next one loads.
+// The current bucket keeps filling, so the data is refreshed periodically.
+export function useStats(id: number, range: StatsRange) {
+  return useQuery({
+    queryKey: keys.stats(id, range),
+    queryFn: () => api<CheckStats>(`/checks/${id}/stats?range=${range}`),
+    placeholderData: keepPreviousData,
+    refetchInterval: range === 'day' ? 30_000 : 5 * 60_000,
+  });
 }
 
 export function useIncidents(checkId?: number) {

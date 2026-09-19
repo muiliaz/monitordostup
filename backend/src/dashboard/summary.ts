@@ -10,7 +10,7 @@ export interface DashboardSummary {
   paused: number;
   // Active checks without a verdict yet (new, or below the failure threshold).
   unknown: number;
-  // Mean of per-check uptime over the last 24 h, in percent; null without results.
+  // Mean of per-check uptime over the last 24 h (whole hours), in percent; null without results.
   uptime24h: number | null;
   computedAt: Date;
 }
@@ -23,16 +23,14 @@ export async function computeSummary(): Promise<DashboardSummary> {
   const [checks, [{ uptime }]] = await Promise.all([
     prisma.check.findMany({ select: { isPaused: true, currentStatus: true } }),
     // Per-check uptime first, then the mean, so a 30 s check does not outweigh
-    // an hourly one. The correlated subquery uses the (check_id, checked_at)
-    // index for each check instead of scanning every result of the day.
+    // an hourly one. Reads the hourly rollup: 24–25 rows per check whatever the
+    // interval; the window is the last 24 whole hours plus the current one.
     prisma.$queryRaw<{ uptime: number | null }[]>`
       SELECT avg(u)::float8 AS uptime FROM (
-        SELECT (
-          SELECT avg(CASE WHEN r.is_success THEN 1.0 ELSE 0.0 END)
-          FROM check_results r
-          WHERE r.check_id = c.id AND r.checked_at >= ${since}
-        ) AS u
-        FROM checks c
+        SELECT 1 - sum(failures)::float8 / sum(total) AS u
+        FROM check_results_hourly
+        WHERE hour >= date_trunc('hour', ${since}::timestamptz, 'UTC')
+        GROUP BY check_id
       ) per_check`,
   ]);
   const active = checks.filter((c) => !c.isPaused);

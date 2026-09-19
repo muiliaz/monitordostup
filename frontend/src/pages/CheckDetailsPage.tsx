@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useCheck, useIncidents, useResults } from '../api/hooks';
 import { IncidentsTable } from '../components/IncidentsTable';
+import { StatsPanel } from '../components/StatsPanel';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatAgo, formatDateTime, formatDuration, formatInterval } from '../format';
 import { useNow } from '../useNow';
@@ -50,6 +51,8 @@ export function CheckDetailsPage() {
           <dd>{c.consecutiveFailures}</dd>
         </dl>
       </div>
+
+      <StatsPanel checkId={id} />
 
       <div className="card">
         <h3>Инциденты</h3>

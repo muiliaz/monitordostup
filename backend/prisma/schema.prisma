@@ -65,8 +65,9 @@ model Check {
 
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
 
-  group     Group?        @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  group              Group?              @relation(fields: [groupId], references: [id], onDelete: SetNull)
   results            CheckResult[]
+  hourly             CheckResultHourly[]
   incidents          Incident[]
   maintenanceWindows MaintenanceWindow[]
 
@@ -92,14 +93,29 @@ model CheckResult {
   @@map("check_results")
 }
 
+// One row per check per UTC hour, maintained by applyResult (see migration.sql).
+model CheckResultHourly {
+  checkId  Int      @map("check_id")
+  hour     DateTime @db.Timestamptz(3)
+  total    Int
+  failures Int
+  sumMsOk  BigInt   @map("sum_ms_ok")
+  maxMsOk  Int?     @map("max_ms_ok")
+
+  check Check @relation(fields: [checkId], references: [id], onDelete: Cascade)
+
+  @@id([checkId, hour])
+  @@map("check_results_hourly")
+}
+
 model Incident {
-  id           Int       @id @default(autoincrement())
-  checkId      Int       @map("check_id")
-  startedAt    DateTime  @map("started_at") @db.Timestamptz(3)
-  endedAt      DateTime? @map("ended_at") @db.Timestamptz(3)
-  durationSec  Int?      @map("duration_sec")
+  id          Int       @id @default(autoincrement())
+  checkId     Int       @map("check_id")
+  startedAt   DateTime  @map("started_at") @db.Timestamptz(3)
+  endedAt     DateTime? @map("ended_at") @db.Timestamptz(3)
+  durationSec Int?      @map("duration_sec")
   // Error of the check that crossed the threshold, for the journal.
-  cause        String?
+  cause       String?
 
   // Alert state lives on the incident: the dispatcher sends whatever is due
   // according to these columns (see alerts/dispatcher.ts). *_at is set when the

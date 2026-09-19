@@ -17,10 +17,11 @@ async function loadPublicChecks(): Promise<PublicCheck[]> {
   const now = new Date();
 
   const [uptimes, windows] = await Promise.all([
+    // Hourly rollup: last 24 whole hours plus the current one.
     prisma.$queryRaw<{ checkId: number; uptime: number }[]>`
-      SELECT check_id AS "checkId", avg(CASE WHEN is_success THEN 1.0 ELSE 0.0 END)::float8 AS uptime
-      FROM check_results
-      WHERE check_id = ANY(${ids}) AND checked_at >= ${new Date(now.getTime() - DAY_MS)}
+      SELECT check_id AS "checkId", 1 - sum(failures)::float8 / sum(total) AS uptime
+      FROM check_results_hourly
+      WHERE check_id = ANY(${ids}) AND hour >= date_trunc('hour', ${new Date(now.getTime() - DAY_MS)}::timestamptz, 'UTC')
       GROUP BY check_id`,
     prisma.maintenanceWindow.findMany({
       where: { endsAt: { gt: now }, OR: [{ checkId: { in: ids } }, { groupId: { in: groupIds } }] },

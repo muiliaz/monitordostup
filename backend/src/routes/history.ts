@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { idParam } from '../validation.js';
 import { computeSummary } from '../dashboard/summary.js';
+import { checkStats } from '../history/stats.js';
+
+const statsQuery = z.object({ range: z.enum(['day', 'week', 'month']).default('day') });
 
 const resultsQuery = z.object({ limit: z.coerce.number().int().min(1).max(500).default(100) });
 
@@ -28,6 +31,14 @@ export async function historyRoutes(app: FastifyInstance) {
     });
     // BIGINT ids don't survive JSON.stringify.
     return rows.map((r) => ({ ...r, id: r.id.toString() }));
+  });
+
+  // Aggregated history for the charts on the check page.
+  app.get('/api/checks/:id/stats', async (req) => {
+    const { id } = idParam.parse(req.params);
+    const { range } = statsQuery.parse(req.query);
+    await prisma.check.findUniqueOrThrow({ where: { id }, select: { id: true } });
+    return checkStats(id, range);
   });
 
   app.get('/api/incidents', async (req) => {

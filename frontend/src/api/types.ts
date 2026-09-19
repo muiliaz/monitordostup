@@ -119,3 +119,22 @@ export interface PublicCheck {
   uptime24h: number | null;
   maintenance: { startsAt: string; endsAt: string }[];
 }
+
+export type StatsRange = 'day' | 'week' | 'month';
+
+export interface StatsBucket {
+  t: string;
+  total: number;
+  failures: number;
+  avgMs: number | null;
+  maxMs: number | null;
+}
+
+export interface CheckStats {
+  range: StatsRange;
+  bucketSec: number;
+  from: string;
+  to: string;
+  buckets: StatsBucket[];
+  totals: { checks: number; failures: number; uptime: number | null; avgMs: number | null; incidents: number; downtimeSec: number };
+}

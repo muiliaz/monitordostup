@@ -30,6 +30,18 @@ export async function applyResult(checkId: number, probe: ProbeResult, checkedAt
       },
     });
 
+    // Same transaction as the raw row, so the rollup can never drift from it.
+    // Only this check's own (never overlapping) runs touch its hour row.
+    const okMs = probe.isSuccess ? probe.responseTimeMs : null;
+    await tx.$executeRaw`
+      INSERT INTO check_results_hourly AS h (check_id, hour, total, failures, sum_ms_ok, max_ms_ok)
+      VALUES (${checkId}, date_trunc('hour', ${checkedAt}::timestamptz, 'UTC'), 1, ${probe.isSuccess ? 0 : 1}, ${okMs ?? 0}, ${okMs})
+      ON CONFLICT (check_id, hour) DO UPDATE SET
+        total = h.total + 1,
+        failures = h.failures + EXCLUDED.failures,
+        sum_ms_ok = h.sum_ms_ok + EXCLUDED.sum_ms_ok,
+        max_ms_ok = GREATEST(h.max_ms_ok, EXCLUDED.max_ms_ok)`;
+
     const { state, transition } = evaluate(current, probe.isSuccess, checkedAt);
 
     // Only monitoring fields are written: the config (url, interval, …) may
