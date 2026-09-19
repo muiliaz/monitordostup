@@ -8,6 +8,7 @@ import { checkRoutes } from './routes/checks.js';
 import { groupRoutes } from './routes/groups.js';
 import { historyRoutes } from './routes/history.js';
 import { maintenanceRoutes } from './routes/maintenance.js';
+import { publicRoutes } from './routes/public.js';
 import { closeAllStreams, streamRoutes } from './live/stream.js';
 import { Scheduler } from './scheduler/scheduler.js';
 import { AlertDispatcher } from './alerts/dispatcher.js';
@@ -25,6 +26,7 @@ app.get('/api/health', async () => {
 });
 
 await app.register(authRoutes);
+await app.register(publicRoutes);
 
 // Everything registered inside this scope requires the admin session.
 await app.register(async (admin) => {

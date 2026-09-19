@@ -138,3 +138,17 @@ a:hover { text-decoration: underline; }
 .empty-state { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 64px 16px; color: var(--faint); }
 .empty-state h3 { color: var(--text); font-size: 18px; margin: 8px 0 0; }
 .empty-state p { max-width: 360px; margin: 0 0 8px; }
+
+.public { max-width: 760px; margin: 0 auto; padding: 32px 16px; }
+.public-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.public-header h1 { font-size: 24px; margin: 0; }
+.overall { border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; font-size: 16px; font-weight: 600; background: var(--neutral-bg); color: var(--muted); }
+.overall-up { background: var(--up-bg); color: var(--up); }
+.overall-down { background: var(--down-bg); color: var(--down); }
+.overall-maint { background: var(--maint-bg); color: var(--maint); }
+.public-list { list-style: none; margin: 0; padding: 0; }
+.public-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.public-list li:last-child { border-bottom: none; }
+.public-list li.row-down { background: var(--down-row); }
+.public-status { text-align: right; }
+.public-footer { text-align: center; margin-top: 24px; }

@@ -106,3 +106,16 @@ export interface DashboardSummary {
   uptime24h: number | null;
   computedAt: string;
 }
+
+export type PublicStatus = CheckStatus | 'paused';
+
+export interface PublicCheck {
+  id: number;
+  name: string;
+  status: PublicStatus;
+  since: string | null;
+  lastCheckedAt: string | null;
+  group: string | null;
+  uptime24h: number | null;
+  maintenance: { startsAt: string; endsAt: string }[];
+}

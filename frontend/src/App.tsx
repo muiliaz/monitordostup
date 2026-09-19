@@ -10,6 +10,7 @@ import { IncidentsPage } from './pages/IncidentsPage';
 import { MaintenancePage } from './pages/MaintenancePage';
 import { GroupsPage } from './pages/GroupsPage';
 import { LoginPage } from './pages/LoginPage';
+import { PublicStatusPage } from './pages/PublicStatusPage';
 
 function AdminLayout() {
   const me = useMe();
@@ -48,6 +49,9 @@ function AdminShell({ username }: { username: string }) {
           <NavLink to="/groups">Группы</NavLink>
         </nav>
         <span className="spacer" />
+        <a href="/status" target="_blank" rel="noreferrer" className="small">
+          Публичная страница ↗
+        </a>
         <LiveIndicator state={live} />
         <span className="muted small">{username}</span>
         <button onClick={logout}>Выйти</button>
@@ -69,6 +73,8 @@ function AdminShell({ username }: { username: string }) {
 export function App() {
   return (
     <Routes>
+      {/* Public, no login: outside AdminLayout so "me" is never requested. */}
+      <Route path="/status" element={<PublicStatusPage />} />
       <Route path="/*" element={<AdminLayout />} />
     </Routes>
   );

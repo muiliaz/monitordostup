@@ -14,7 +14,7 @@ const openStreams = new Set<ServerResponse>();
 export function openEventStream(
   req: FastifyRequest,
   reply: FastifyReply,
-  transform: (event: LiveEvent) => LiveEvent | null = (e) => e,
+  transform: (event: LiveEvent) => { type: string; data: unknown } | null = (e) => e,
 ) {
   reply.hijack();
   const res = reply.raw;

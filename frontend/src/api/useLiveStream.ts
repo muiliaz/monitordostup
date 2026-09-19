@@ -8,11 +8,11 @@ export type LiveState = 'connecting' | 'open' | 'reconnecting';
 
 const RESULTS_KEPT = 50;
 
-type Handlers = Record<string, (qc: QueryClient, data: any) => void>;
+export type Handlers = Record<string, (qc: QueryClient, data: any) => void>;
 
 // Each server event patches the TanStack Query cache in place, so both tabs
 // (each with its own EventSource) update without refetching whole lists.
-const handlers: Handlers = {
+const adminHandlers: Handlers = {
   'check.upsert': (qc, patch: Partial<Check> & { id: number }) => {
     let known = false;
     qc.setQueryData<Check[]>(keys.checks, (list) =>
@@ -48,7 +48,8 @@ const handlers: Handlers = {
   },
 };
 
-export function useLiveStream(url: string): LiveState {
+// `handlers` must be a stable (module-level) object: it is an effect dependency.
+export function useLiveStream(url: string, handlers: Handlers = adminHandlers): LiveState {
   const qc = useQueryClient();
   const [state, setState] = useState<LiveState>('connecting');
 
@@ -69,7 +70,7 @@ export function useLiveStream(url: string): LiveState {
       es.addEventListener(type, (e) => handle(qc, JSON.parse((e as MessageEvent).data)));
     }
     return () => es.close();
-  }, [qc, url]);
+  }, [qc, url, handlers]);
 
   return state;
 }
