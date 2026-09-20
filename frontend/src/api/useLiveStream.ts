@@ -32,6 +32,7 @@ const adminHandlers: Handlers = {
   },
   'check.result': (qc, result: CheckResult) => {
     qc.setQueryData<CheckResult[]>(keys.results(result.checkId), (list) => (list ? [result, ...list].slice(0, RESULTS_KEPT) : list));
+    qc.setQueryData<CheckResult>(keys.lastResult(result.checkId), result);
   },
   'incident.opened': (qc) => void qc.invalidateQueries({ queryKey: ['incidents'] }),
   'incident.closed': (qc) => void qc.invalidateQueries({ queryKey: ['incidents'] }),

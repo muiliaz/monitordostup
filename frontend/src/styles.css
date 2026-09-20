@@ -187,3 +187,5 @@ a:hover { text-decoration: underline; }
 .key-gap { width: 14px; height: 2px; background: var(--faint); }
 .stats-table summary { cursor: pointer; color: var(--muted); font-size: 12px; padding: 4px 0; }
 .stats-table table { margin-top: 8px; }
+
+.run-ok { color: var(--up); }

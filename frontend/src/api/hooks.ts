@@ -8,6 +8,8 @@ export const keys = {
   groups: ['groups'] as const,
   check: (id: number) => ['checks', id] as const,
   results: (id: number) => ['checks', id, 'results'] as const,
+  // Last probe result of a check, pushed by the live stream (never fetched).
+  lastResult: (id: number) => ['checks', id, 'lastResult'] as const,
   stats: (id: number, range: StatsRange) => ['checks', id, 'stats', range] as const,
   incidents: (checkId?: number) => ['incidents', checkId ?? 'all'] as const,
   maintenance: (scope: 'current' | 'past') => ['maintenance', scope] as const,
@@ -39,6 +41,13 @@ export function useStats(id: number, range: StatsRange) {
     placeholderData: keepPreviousData,
     refetchInterval: range === 'day' ? 30_000 : 5 * 60_000,
   });
+}
+
+// Filled only by the `check.result` stream event: it shows what a manual
+// "Проверить сейчас" produced, including a failure that is still below the
+// threshold and so has not changed the status.
+export function useLastResult(id: number) {
+  return useQuery({ queryKey: keys.lastResult(id), queryFn: () => null as CheckResult | null, enabled: false, staleTime: Infinity });
 }
 
 export function useIncidents(checkId?: number) {

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ApiError } from '../api/client';
-import { useCheckAction, useChecks, useGroups, useMaintenance } from '../api/hooks';
-import type { Check, CheckStatus, Group, MaintenanceWindow } from '../api/types';
+import { useCheckAction, useChecks, useGroups, useLastResult, useMaintenance } from '../api/hooks';
+import type { Check, CheckResult, CheckStatus, Group, MaintenanceWindow } from '../api/types';
 import { groupStatus } from '../groupStatus';
 import { MaintenanceBadge } from '../components/MaintenanceBadge';
 import { activeWindow } from '../maintenance';
@@ -19,6 +19,17 @@ const isDown = (c: Check) => !c.isPaused && c.currentStatus === 'down';
 // gets the same rule applied on the client.
 function sectionStatus(s: { group: Group | null; items: Check[] }): CheckStatus {
   return s.group ? s.group.status : groupStatus(s.items);
+}
+
+// What to show after "Проверить сейчас": the result of that run once it
+// arrives over the stream, not just the fact that the request was accepted.
+function runFeedback(c: Check, last: CheckResult | null | undefined, ranAt: number): { ok: boolean; text: string } | null {
+  if (c.isRunning) return null;
+  const fresh = last && new Date(last.checkedAt).getTime() >= ranAt - 2000 ? last : null;
+  if (!fresh) return { ok: true, text: 'проверка запущена…' };
+  return fresh.isSuccess
+    ? { ok: true, text: `проверено: успех, ${fresh.responseTimeMs} мс` }
+    : { ok: false, text: `проверено: неудача — ${fresh.errorMessage ?? `HTTP ${fresh.httpCode ?? '—'}`}` };
 }
 
 type Editing = { mode: 'new' } | { mode: 'edit'; check: Check } | null;
@@ -122,8 +133,16 @@ export function ChecksPage() {
   );
 }
 
+// How long the outcome of a manual run stays on the row.
+const RUN_FEEDBACK_MS = 8000;
+
 function CheckRow({ check: c, now, maintenance, onEdit }: { check: Check; now: number; maintenance: MaintenanceWindow | null; onEdit: () => void }) {
   const action = useCheckAction();
+  const [ranAt, setRanAt] = useState<number | null>(null);
+  const lastResult = useLastResult(c.id).data;
+  // A manual probe usually takes milliseconds: without this the only visible
+  // change is "последняя проверка: 0с назад", which is easy to miss.
+  const feedback = ranAt !== null && now - ranAt < RUN_FEEDBACK_MS ? runFeedback(c, lastResult, ranAt) : null;
   const downFor = isDown(c) && c.statusChangedAt ? now - new Date(c.statusChangedAt).getTime() : null;
 
   return (
@@ -132,6 +151,7 @@ function CheckRow({ check: c, now, maintenance, onEdit }: { check: Check; now: n
         <StatusBadge status={c.currentStatus} paused={c.isPaused} />
         <MaintenanceBadge window={maintenance} />
         {c.isRunning && <div className="muted small">идёт проверка…</div>}
+        {feedback && <div className={`small ${feedback.ok ? 'run-ok' : 'error'}`}>{feedback.text}</div>}
       </td>
       <td>
         <div className="check-name">
@@ -149,8 +169,15 @@ function CheckRow({ check: c, now, maintenance, onEdit }: { check: Check; now: n
       <td>{downFor !== null ? <span className="down-duration">{formatDuration(downFor)}</span> : '—'}</td>
       <td>{formatInterval(c.intervalSec)}</td>
       <td className="row-actions">
-        <button disabled={c.isRunning} onClick={() => action.mutate({ id: c.id, action: 'run' })} title="Запустить проверку сейчас">
-          Запустить
+        <button
+          disabled={c.isRunning}
+          onClick={() => {
+            setRanAt(Date.now());
+            action.mutate({ id: c.id, action: 'run' });
+          }}
+          title="Выполнить проверку немедленно, не дожидаясь интервала. Результат попадёт в историю, а отсчёт интервала начнётся заново."
+        >
+          Проверить сейчас
         </button>
         {c.isPaused ? (
           <button onClick={() => action.mutate({ id: c.id, action: 'resume' })}>Возобновить</button>
